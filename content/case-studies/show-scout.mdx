@@ -1,0 +1,199 @@
+## The problem I actually had
+
+I like theatre. I kept missing shows I would have travelled for, because
+regional programming is announced across a few hundred venue sites, a handful
+of producer newsletters, and nowhere else. There is no index. If you want to
+know that a touring production is playing three hours from you in October, the
+only reliable method is to go and look, repeatedly, forever.
+
+So the product question was not "how do I build a theatre database". It was:
+what is the smallest system that can tell someone something they would have
+missed, without either of us doing any work?
+
+<Callout label="The framing that mattered">
+Every feature had to answer to one test — does this reduce the number of times
+a user has to check something? Search is not the product. The message is the
+product. That test killed several features I wanted to build, including a
+browsable national calendar.
+</Callout>
+
+## What it does
+
+You add shows to a watchlist and cities you would travel to. After that you do
+nothing. When a performance turns up that matches both, you get a message.
+
+<MediaSlot
+  id="SS-01"
+  kind="screenshot"
+  what="The watchlist page with four or five shows added and a city list beside it"
+  framing="Desktop, full width, light theme. Populate with real, recognisable titles — not Lorem. Crop to the content column, not the whole browser chrome."
+  purpose="First proof the thing is real. This is the shot a reader looks at before deciding whether to keep reading."
+/>
+
+## How a match becomes a message
+
+<FlowDiagram id="show-scout-pipeline" />
+
+## The hard part was time
+
+A performance has a date and a time, and both are meaningless without a place.
+A 7:30pm curtain in Ashland is not the same instant as a 7:30pm curtain in
+Chicago, and a user in a third timezone needs to be told about both correctly.
+
+I settled this at the schema layer rather than in application code, so that
+every consumer of a performance row — the matcher, the email template, the
+mobile app — inherits the same answer instead of each re-deriving it.
+
+<CodeSample
+  file="supabase/migrations/…_performances.sql"
+  language="sql"
+  why="Storing the instant and the venue's zone separately. The instant is for comparison; the zone is for display."
+  code={`
+create table performances (
+  id            uuid primary key default gen_random_uuid(),
+  production_id uuid not null references productions(id),
+  venue_id      uuid not null references venues(id),
+  -- the moment in time, always UTC
+  show_datetime timestamptz not null,
+  -- what the audience sees on the ticket
+  local_date    date generated always as (
+                  (show_datetime at time zone venue_timezone())::date
+                ) stored,
+  status        text not null default 'pending'
+                check (status in ('pending','approved','rejected'))
+);
+`}
+/>
+
+<Revise>
+Replace the snippet above with the real migration once you have settled the
+generated-column approach — and if you went a different way, say so here. A
+case study that admits a rewrite reads better than one that pretends the first
+design held.
+</Revise>
+
+## The matching job
+
+The obvious implementation is a loop: for each user, fetch their watchlist,
+fetch their cities, query performances. That is an N+1 with a network hop per
+user, and it gets slower exactly as the product succeeds.
+
+Instead the join lives in Postgres as a function on a `pg_cron` schedule. One
+query plan, one transaction, and the write into `matches` is the same statement
+that found them.
+
+<CodeSample
+  file="supabase/functions/match_watchlist_to_performances.sql"
+  language="sql"
+  why="The whole matching product in one statement. The ON CONFLICT clause is what makes the job safe to run twice."
+  code={`
+insert into matches (user_id, performance_id, matched_at)
+select w.user_id, p.id, now()
+from watchlist w
+join user_cities uc on uc.user_id = w.user_id
+join performances p on p.production_id = w.production_id
+                   and p.venue_city_id  = uc.city_id
+where p.status = 'approved'
+  and p.show_datetime > now()
+on conflict (user_id, performance_id) do nothing;
+`}
+/>
+
+<Callout label="Why the send is a separate job">
+Matching and notifying run on different schedules and fail independently. A
+SendGrid outage should not stop the catalogue from matching, and a bad matching
+deploy should not put a hundred wrong emails in front of users before I notice.
+The `matches` table is the seam: it is both the join result and the ledger of
+what has been sent.
+</Callout>
+
+<MediaSlot
+  id="SS-02"
+  kind="recording"
+  what="Adding a show to the watchlist, typed with a deliberate misspelling, and the fuzzy search still finding it"
+  framing="10–15 seconds, screen only, no audio, no cursor trails. Type slowly enough to read. Loop cleanly — start and end on the same view."
+  purpose="Fuzzy search via pg_trgm is a sentence in the prose and a delight in motion. This is the single highest-value recording on the site."
+  aspect="16 / 10"
+/>
+
+## Where Claude sits in the product
+
+<Revise>
+This section is the one AI-product-engineer hiring managers will read closest.
+Be concrete: what exactly does the Claude API call do, what does the prompt
+receive, what happens when it returns something wrong, and how do you know?
+Write it as an engineering decision, not a feature announcement.
+</Revise>
+
+Scraped listings arrive as free text. Titles vary, venues abbreviate, and the
+same production appears under three names in a week. Claude normalises those
+into a candidate record, which then goes to a human — me — for approval rather
+than straight into the catalogue.
+
+<Callout label="The design constraint">
+The model proposes, it does not publish. Everything it produces lands in the
+admin review queue with a soft-reject path, so a bad extraction becomes a
+rejected row rather than a wrong email. Cost of a false positive here is a user
+driving to a theatre for a show that is not on.
+</Callout>
+
+<MediaSlot
+  id="SS-03"
+  kind="screenshot"
+  what="The admin review queue with a mix of pending, approved and soft-rejected rows"
+  framing="Show at least one rejected row so the soft-delete story is visible. Blur or replace any real venue contact details."
+  purpose="Evidence of the human-in-the-loop decision, which is the substance of the AI section."
+/>
+
+## Decisions
+
+<Decisions
+  rows={[
+    {
+      decision: "Matching as a Postgres function on pg_cron",
+      instead: "A Node worker looping over users",
+      because:
+        "One query plan instead of N+1 over the network, and the write happens in the same transaction that found the match.",
+    },
+    {
+      decision: "A separate Python scraper on Railway",
+      instead: "Scraping inside the Next.js app",
+      because:
+        "Scraping is bursty and slow. Keeping it off the request-handling runtime means a hung fetch cannot degrade the site.",
+    },
+    {
+      decision: "Soft rejects in the admin queue",
+      instead: "Deleting bad scraped rows",
+      because:
+        "A deleted row gets re-proposed on the next scrape. A rejected row is a memory.",
+    },
+    {
+      decision: "Incremental TypeScript migration",
+      instead: "A big-bang rewrite or staying on JS",
+      because:
+        "Supabase generates types from the schema, so the payoff concentrates in the data layer — that is where I converted first.",
+    },
+    {
+      decision: "Coming-soon page with waitlist capture",
+      instead: "Waiting for feature completeness to launch",
+      because:
+        "Demand evidence before the notification volume matters. REVISE with what the waitlist actually told you.",
+    },
+  ]}
+/>
+
+## What is not done
+
+- <Revise>Be honest and specific here. Unfinished work described precisely reads as judgement; described vaguely it reads as an excuse.</Revise>
+- The React Native / Expo companion app is scaffolded and lives in its own repo.
+- Monetization is designed but not switched on — lifetime-subscription caps
+  against Stripe, chosen over Patreon for entitlement control.
+
+<MediaSlot
+  id="SS-04"
+  kind="screenshot"
+  what="The Expo app running in a simulator, showing the watchlist"
+  framing="9:16 device frame, one screen only. Skip this slot entirely if the mobile app is not presentable — a missing shot is better than a weak one."
+  purpose="Shows the system extends past the web app."
+  aspect="9 / 16"
+/>

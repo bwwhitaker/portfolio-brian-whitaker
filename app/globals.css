@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/*
+  Design direction: "working drawings".
+  The through-line in Brian's work is systems that run themselves — cron jobs,
+  matching functions, webhooks, proctored timers. The site borrows the language
+  of technical documentation: oat paper, slate ink, pencil rules, and two
+  functional accents (brass for emphasis, viridian for live/active states).
+  Grid and rule work appear only where they carry meaning (diagrams, credits).
+*/
+
+:root {
+  --paper: #f1efe9;
+  --paper-raised: #e8e5dd;
+  --ink: #1b2430;
+  --ink-soft: #56606d;
+  --rule: #cfcbc0;
+  --rule-strong: #b3ada0;
+  --brass: #8a6210;
+  --brass-soft: #e6d9b8;
+  --viridian: #0e5f57;
+  --viridian-soft: #cfe3df;
+  --shadow: 27 36 48;
+}
+
+.dark {
+  --paper: #14181b;
+  --paper-raised: #1d2327;
+  --ink: #e6e3da;
+  --ink-soft: #949da5;
+  --rule: #2f373d;
+  --rule-strong: #47525a;
+  --brass: #d5a854;
+  --brass-soft: #3a3122;
+  --viridian: #57b7aa;
+  --viridian-soft: #1c3330;
+  --shadow: 0 0 0;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-viridian: var(--viridian);
+  --color-viridian-soft: var(--viridian-soft);
+
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-prose: var(--font-newsreader), Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--brass-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- Long-form case study prose ---------- */
+
+.prose {
+  font-family: var(--font-prose);
+  font-size: 1.0625rem;
+  line-height: 1.72;
+  color: var(--ink);
+  max-width: 68ch;
+}
+
+.prose > * + * { margin-top: 1.15em; }
+
+.prose h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.prose h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: -0.01em;
+  margin-top: 2rem;
+}
+
+.prose p > strong { font-weight: 600; }
+
+.prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--brass);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+}
+.prose a:hover { color: var(--brass); }
+
+.prose ul, .prose ol { padding-left: 1.25rem; }
+.prose li { margin-top: 0.4em; }
+.prose ul > li { list-style: none; position: relative; }
+.prose ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: 0.72em;
+  width: 8px;
+  height: 1px;
+  background: var(--rule-strong);
+}
+.prose ol > li { list-style: decimal; }
+
+.prose blockquote {
+  border-left: 2px solid var(--brass);
+  padding-left: 1rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2.5rem 0;
+}
+
+/* Full-bleed children inside prose (diagrams, media slots) */
+.prose .bleed {
+  max-width: none;
+  width: 100%;
+}
+
+/* ---------- Small shared pieces ---------- */
+
+.chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  background: var(--paper-raised);
+}
+
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--rule) 0 1px,
+    transparent 1px 7px
+  );
+}

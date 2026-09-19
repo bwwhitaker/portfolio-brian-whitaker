@@ -1,0 +1,141 @@
+## A small game, built properly
+
+Cloaked is a browser game inspired by Battleship about deduction under risk.
+You are scanning a grid of space for cloaked enemy ships, and every scan risks
+giving away your position — so you have to find them by inference rather than
+by brute force. Scan a cell and it reports one of three things: all clear, a ship
+is adjacent, or you scanned directly onto a ship and the enemy fires first.
+Then you switch to Target mode, mark where you think the ships are, and fire.
+
+It is the smallest project here and the one I would point at if you wanted to
+know how I work when nobody is watching.
+
+<MediaSlot
+	id='CL-01'
+	kind='recording'
+	what='A short round — a clear scan, an adjacent hit, marking two cells, firing, winning'
+	framing='Already captured as docs/gameplay.gif in the repo. Convert to MP4 for the page — a looping GIF at this size is several times the file weight of the equivalent video.'
+	purpose='It is a game. Let a reader see it move before reading a word about test coverage.'
+	aspect='4 / 3'
+/>
+
+## The decision that made everything else possible
+
+The game rules used to live inside the React components, which meant they could
+not be tested without rendering the whole UI. I pulled them into a pure,
+framework-free module: adjacency, win detection, the lucky-first-scan rule, and
+ship placement. React renders the result and does nothing else.
+
+The placement function takes its random number generator as a parameter rather
+than reaching for `Math.random` directly. That one seam is what made the rest
+of the suite possible.
+
+<Callout label='Why the injected RNG'>
+	A game with real randomness is untestable — you cannot assert on a board you cannot reproduce. Passing the generator
+	in means a test supplies its own sequence and the same sequence always produces the same board. The alternative is
+	either mocking a global or writing assertions vague enough to pass on any board, and neither of those tells you the
+	adjacency maths is right.
+</Callout>
+
+The awkward part was never the randomness. It was the board-edge arithmetic.
+Cells are numbered `1..axis²` left to right, so a cell's left neighbour is
+`id - 1` — except on the left edge, where `id - 1` is the _right_ edge of the
+row above and must not count. Vertical neighbours need no such guard, because
+off-board ids simply never appear in the ship list. Getting that wrong produces
+a game that is subtly, maddeningly wrong near the borders and fine everywhere
+else.
+
+<CodeSample
+	file='src/Components/GameLogic.js'
+	language='js'
+	why='The edge guards are the whole problem. notLeftEdge and notRightEdge are what stop a neighbour lookup from wrapping onto an adjacent row.'
+	code={`
+export function isAdjacentToShip(id, ships, axis, diagonal = false) {
+	const left = id - 1;
+	const right = id + 1;
+	const up = id - axis;
+	const down = id + axis;
+
+    const notLeftEdge = id % axis !== 1;
+    const notRightEdge = id % axis !== 0;
+
+    if (includes(left, ships) && notLeftEdge) return true;
+    if (includes(right, ships) && notRightEdge) return true;
+    if (includes(up, ships)) return true;
+    if (includes(down, ships)) return true;
+
+    if (!diagonal) return false;
+    // ...four diagonal neighbours, same edge guards
+
+}
+`}
+/>
+
+## What a real test suite actually caught
+
+The suite started as coverage of the logic module. Going back to extend it
+across the components surfaced four bugs I would not have found by playing the
+game, which is the argument for writing tests better than any coverage number.
+
+- **An unbounded loop.** Ship placement kept drawing until it had enough unique
+  cells. Ask for more ships than the board has cells and it spins forever. The
+  UI caps ships at five on a sixteen-cell board so it was unreachable — but an
+  unguarded `while` in the one module the whole game depends on is not
+  something to leave sitting there. It now throws.
+- **A docblock that lied.** `isLuckyFirstScan` was documented as detecting a
+  first scan that lands on a ship. It never looked at the ships. Correctness
+  depended entirely on `revealShip` being its only caller, which is invisible to
+  anyone reading the module. It now takes the ship list and checks.
+- **A crash from a typo.** The style resolver returned `undefined` for an
+  unrecognised status, and the cell component destructures that result. One
+  wrong status string would have taken down the entire board with a TypeError
+  instead of rendering one wrong-coloured cell.
+- **A permanently broken display.** The win streak is persisted to
+  `localStorage`. Anything can end up in there — a half-written value, an older
+  format, a user in devtools — and `parseInt` returns `NaN`, which rendered as
+  "Streak Count: NaN" with no way back short of clearing site data.
+
+Two smaller ones came out of the same pass: a reset changed the board
+background permanently because the change had no route back, and the diagonal
+mode flag and its button label were two separate pieces of state that had to be
+flipped together by hand.
+
+<Callout label='Where the tests stop'>
+	The component tests assert wiring, not rules. Adjacency maths is already covered at the unit level, and re-asserting
+	it through a rendered DOM would be slower, more brittle, and no more convincing. What the component tests cover is
+	everything the pure module cannot see — that the right mode routes to the right handler, that deferred reveals land,
+	that the streak callbacks fire on the right outcomes, and that unmounting mid-animation does not leave a state update
+	chasing a component that is gone.
+</Callout>
+
+## The pipeline
+
+Sixty-four tests across five files. The deploy is gated on all of them.
+
+- Migrated from Create React App to Vite.
+- GitHub Actions runs three jobs — test, build, deploy — chained with `needs:`,
+  so **a red test cannot reach production**. Pull requests get the test gate
+  without deploying.
+- Deploys through `actions/deploy-pages` with OIDC rather than pushing a built
+  branch, and a concurrency group that will not cancel an in-flight deploy.
+- Upgraded deprecated Action versions ahead of the forced Node migration rather
+  than after it broke.
+- Removed an `npm run deploy` script left over from the old setup. It published
+  straight to Pages without running anything, which quietly defeated the gate
+  the rest of this list describes.
+- Optimised the background image from an Adobe RGB PNG to an sRGB WebP.
+
+<MediaSlot
+	id='CL-02'
+	kind='screenshot'
+	what='A green Actions run showing test, build and deploy as three chained jobs'
+	framing='Crop to the job list so the needs: chain is visible. A failed-then-fixed run in the history is fine and arguably better.'
+	purpose='This is the whole point of the project. Without this shot the CI section is a claim.'
+/>
+
+<Revise>
+	Add one line about why a game sits among commercial products — something in your own words about keeping engineering
+	habits sharp with no product pressure and no deadline. Then decide whether this stays at all: three strong case
+	studies beat four uneven ones, and this one now earns its place mainly on the testing and CI story rather than the
+	game.
+</Revise>
