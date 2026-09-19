@@ -1,0 +1,67 @@
+## An investment structure nobody can evaluate
+
+Accessory dwelling units are one of the few housing levers a single homeowner
+can actually pull. Co-investment — an investor funds the build in exchange for
+a share of the return — makes them reachable for people who cannot write a
+six-figure cheque.
+
+The problem is that nobody can tell whether a given deal is good. The maths sits
+across construction cost, financing, rent, vacancy, appreciation, holding
+period, and the split itself. It lives in a spreadsheet, which means it lives
+with whoever built the spreadsheet.
+
+<Callout label="The product bet">
+Put the whole model on one screen, make every input adjustable, and show both
+sides of the deal at once. If a homeowner and an investor can look at the same
+numbers and disagree about assumptions rather than about arithmetic, the
+conversation is different.
+</Callout>
+
+<MediaSlot
+  id="IH-01"
+  kind="screenshot"
+  what="The calculator with a realistic deal loaded — inputs on one side, both parties' returns on the other"
+  framing="Full width, desktop. Use plausible Portland-area numbers. This is the hero shot for this case study, so make the numbers tell a story."
+  purpose="The entire product is one screen. Show the screen."
+/>
+
+<MediaSlot
+  id="IH-02"
+  kind="recording"
+  what="Dragging one assumption — say, monthly rent or holding period — and watching both parties' returns move"
+  framing="8–12 seconds, one input only. Resist showing off; a single slider moving is more legible than five."
+  purpose="A static calculator screenshot looks like a form. In motion it looks like a model."
+  aspect="16 / 10"
+/>
+
+## What I fixed on the way back to it
+
+I came back to this project during a portfolio pass and found the live
+calculator broken and the README thin enough to undersell the thinking behind
+it. Both are worth naming, because the fix is the interesting part:
+
+- Several bugs across the React frontend and the Express backend, patched.
+- The frontend was hard-wired to a local API host. Now it reads `VITE_API_URL`,
+  so the deployed build talks to the deployed API.
+- The README was rewritten to lead with the model and the assumptions rather
+  than the install steps.
+
+<Revise>
+Name one specific bug and what caused it. "Fixed several bugs" is invisible;
+"the returns diverged after year seven because appreciation compounded on the
+wrong base" is a story about how you debug.
+</Revise>
+
+## Where the product thinking is
+
+The engineering here is modest — React, Vite, an Express API. The work is in the
+model: deciding which assumptions a user is allowed to change, which ones are
+fixed because getting them wrong invalidates the output, and how to present a
+result that is genuinely uncertain without pretending to precision it does not
+have.
+
+<Revise>
+Set out the three or four assumptions the model exposes and the ones it holds
+fixed, and say why for each. This is the most transferable product-judgement
+artifact you have — do not leave it implicit.
+</Revise>

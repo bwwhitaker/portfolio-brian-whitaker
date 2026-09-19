@@ -1,0 +1,225 @@
+## A two-person company that needs to behave like a bigger one
+
+My co-founder tutors — AP prep, SAT prep, college admissions. She is the entire
+delivery capacity of the business. Every hour she spends on scheduling,
+invoicing, chasing payment, or formatting a practice test is an hour she is not
+teaching, and there is no second tutor to absorb it.
+
+That constraint set the product strategy. Not "what would a tutoring platform
+have", but: what work can software take off the one person who cannot be
+duplicated?
+
+<Callout label="The scoping decision">
+We launch with paid lesson packages and nothing else. Practice tests, subject
+subscriptions and the video library are all built or part-built, and all hidden
+behind feature flags. Tests roll out next, video after that. Shipping the
+revenue path first meant the business could take money months before the
+product was "finished".
+</Callout>
+
+## How it fits together
+
+<FlowDiagram id="paper-doc-architecture" />
+
+<MediaSlot
+  id="PD-01"
+  kind="screenshot"
+  what="The admin dashboard on first load — subjects, tests, lesson balances"
+  framing="Desktop, sidebar expanded. Use realistic subject names. Redact student names."
+  purpose="Establishes the scale of what got built. Readers underestimate two-person products until they see an admin."
+/>
+
+## Selling time, then tracking it
+
+Lesson packages sound simple and are not. Three group sizes — one student, two
+to three, four to ten — across single lessons, five-packs and ten-packs. Nine
+products, priced separately, all drawing down against the same finite resource:
+my co-founder's calendar.
+
+I chose to track everything in **minutes** rather than lessons. A "lesson" is
+not a fixed unit once you allow different durations and group sizes, and the
+moment you let someone use half a credit, a lesson-denominated balance starts
+lying to you.
+
+<CodeSample
+  file="supabase/functions/consume_lesson_minutes.sql"
+  language="sql"
+  why="Credits are bought in lots at different prices. Usage draws down oldest-first so a customer never loses the cheaper lot they bought first."
+  code={`
+-- FIFO across credit lots. Returns the lots touched so the usage log
+-- can show exactly which purchase paid for which lesson.
+create or replace function consume_lesson_minutes(
+  p_student_id uuid,
+  p_minutes    int
+) returns table (lot_id uuid, minutes_taken int)
+language plpgsql as $$
+declare
+  remaining int := p_minutes;
+  lot       record;
+begin
+  for lot in
+    select id, minutes_remaining
+    from lesson_credit_lots
+    where student_id = p_student_id and minutes_remaining > 0
+    order by purchased_at asc
+    for update
+  loop
+    exit when remaining <= 0;
+    lot_id        := lot.id;
+    minutes_taken := least(remaining, lot.minutes_remaining);
+
+    update lesson_credit_lots
+       set minutes_remaining = minutes_remaining - minutes_taken
+     where id = lot.id;
+
+    remaining := remaining - minutes_taken;
+    return next;
+  end loop;
+
+  if remaining > 0 then
+    raise exception 'insufficient balance: % minutes short', remaining;
+  end if;
+end;
+$$;
+`}
+/>
+
+Unused hours do not expire. That is a deliberate trust decision rather than an
+oversight — expiring credits is a good revenue lever and a bad look for a
+business whose entire growth mechanism is parents recommending it to other
+parents.
+
+<MediaSlot
+  id="PD-02"
+  kind="recording"
+  what="Buying a five-pack end to end: package page, Stripe Checkout, back to a student page showing the new balance"
+  framing="20–30 seconds. Use Stripe test mode and the 4242 card. Cut the card-typing down to a couple of seconds. No audio."
+  purpose="The single clearest proof of full-stack work on this site — a real payment, a webhook, and state changing as a result."
+/>
+
+<Decisions
+  rows={[
+    {
+      decision: "Balances in minutes",
+      instead: "Balances in lessons",
+      because:
+        "Group size and duration vary. A lesson-denominated balance stops being true the first time someone books 90 minutes.",
+    },
+    {
+      decision: "Stripe Checkout",
+      instead: "Patreon",
+      because:
+        "Entitlement has to be enforceable in our own database. Patreon gives you a payment, not a permission model.",
+    },
+    {
+      decision: "No expiry on credits",
+      instead: "Twelve-month expiry",
+      because:
+        "Referral is the growth channel. Breakage revenue is not worth a parent telling another parent we took their money.",
+    },
+    {
+      decision: "Daily purchase caps per package duration",
+      instead: "Unlimited booking",
+      because:
+        "There is exactly one tutor. The product must not sell time that cannot be delivered.",
+    },
+  ]}
+/>
+
+## The authoring problem
+
+The test editor started as one component and grew until editing it was
+frightening. `TestEditor.jsx` and `ProctoredTestShell.jsx` both crossed the line
+where a change in one place broke something two screens away.
+
+I split both into focused sub-components against a shared helpers module —
+`StimulusRow`, `QuestionRow`, `StimulusImageUpload` on the authoring side;
+`IntroScreen`, `ActiveTestView`, `QuestionPanel`, `ResultsScreen`,
+`StimulusBanner`, `ImageLightbox`, `ExplanationSection` on the student side.
+
+<Callout label="Worth saying out loud">
+This was maintenance work with no user-visible output, done in the middle of a
+launch push. I did it because the next three features all touched those two
+files, and the alternative was paying interest on every one of them.
+</Callout>
+
+The bigger authoring win was upstream. Test content arrives as Word documents,
+so I built an importer with a **deterministic label-prefix parser** — `Q:`,
+`TYPE:`, `OPTIONS:` — plus a downloadable `.docx` template so authors write in
+a shape the parser can read.
+
+<CodeSample
+  file="lib/QuestionParser.js"
+  language="js"
+  why="Deterministic over clever. A parser that is right 95% of the time creates more review work than it saves."
+  code={`
+const LABELS = ['Q', 'TYPE', 'OPTIONS', 'ANSWER', 'EXPLAIN_CORRECT', 'EXPLAIN_INCORRECT'];
+
+export function parseBlock(raw) {
+  const fields = {};
+  let current = null;
+
+  for (const line of raw.split('\\n')) {
+    const match = line.match(/^([A-Z_]+):\\s?(.*)$/);
+    if (match && LABELS.includes(match[1])) {
+      current = match[1];
+      fields[current] = match[2];
+    } else if (current) {
+      fields[current] += '\\n' + line;   // continuation, not a new field
+    }
+  }
+
+  if (!fields.Q) throw new ParseError('block has no Q: line', raw);
+  return normalise(fields);
+}
+`}
+/>
+
+<MediaSlot
+  id="PD-03"
+  kind="recording"
+  what="Pasting or importing a Word doc and watching a full test populate in the editor"
+  framing="15–20 seconds. Show the source document briefly, then the result. This is the moment the time saving becomes obvious."
+  purpose="Turns 'I built an importer' into a visible before-and-after."
+/>
+
+## The exam runtime
+
+A proctored test is a small real-time application: timing, anti-cheating flags,
+a stimulus that has to stay visible while the questions scroll, and an answer
+reveal that is configurable between immediate and end-of-test.
+
+- Per-question time is tracked into a `question_time_spent` JSONB column on
+  `test_attempts` — a variable-length structure that would be miserable as
+  rows, and that we only ever read as a unit.
+- The stimulus side panel scrolls independently and full-height, with a
+  `layout: 'side' | 'inline'` field so a long passage and a small diagram can
+  be presented differently.
+- Layout had to hold from a wide desktop down to a phone. The stimulus and
+  question stay visible at every width; the question-number nav collapses first.
+
+<MediaSlot
+  id="PD-04"
+  kind="recording"
+  what="Sitting a question with a table stimulus, locking in an answer, and the explanation revealing"
+  framing="Show the immediate reveal mode. 12–18 seconds. Include one horizontal scroll of the table to show the custom scrollbar."
+  purpose="Demonstrates the reveal modes and the custom scroll work in one take."
+/>
+
+<MediaSlot
+  id="PD-05"
+  kind="screenshot"
+  what="The same test view at a narrow width, nav collapsed, stimulus and question both still readable"
+  framing="Pair this with PD-04 side by side if you can — responsive work only reads as work when the two states sit next to each other."
+  purpose="Evidence for the responsive layout paragraph above."
+  aspect="9 / 16"
+/>
+
+## What I would tell you if you asked in an interview
+
+<Revise>
+Write two or three sentences here in your own voice about what this project
+taught you that your PM roles did not. The honest version — where you were
+wrong, what you cut, what you would build differently — lands better than a
+summary of features. Interviewers ask this exact question.
+</Revise>
