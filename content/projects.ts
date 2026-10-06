@@ -18,7 +18,7 @@ export const site = {
 		github: 'https://github.com/bwwhitaker',
 		linkedin: 'https://www.linkedin.com/in/bwwhitaker',
 		resume: '/Brian_Whitaker_Product_and_Engineering.pdf', // drop the PDF in /public
-		portfolioRepo: 'https://github.com/bwwhitaker/portfolio',
+		portfolioRepo: 'https://github.com/bwwhitaker/portfolio-brian-whitaker',
 	},
 };
 
