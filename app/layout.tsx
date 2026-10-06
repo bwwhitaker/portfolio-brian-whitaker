@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Newsreader, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
+import HideOnScrollHeader from "@/components/HideOnScrollHeader";
 import ThemeToggle from "@/components/ThemeToggle";
 import { site } from "@/content/projects";
 import "./globals.css";
@@ -70,12 +71,34 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
 
-        <header className="border-b border-rule">
+        <HideOnScrollHeader>
           <div className="mx-auto flex max-w-6xl items-baseline gap-6 px-5 py-4 sm:px-8">
             <Link
               href="/"
               className="font-display text-[0.95rem] font-bold tracking-tight"
             >
+              <svg
+                viewBox="-2 0 50 32"
+                aria-hidden="true"
+                className="mr-2 inline-block h-4 w-auto align-[-0.1em]"
+              >
+                <path
+                  d="M11.5 2 H14 A5 6 0 0 1 14 14 H11.5 M11.5 14 H15 A6 8 0 0 1 15 30 H11.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <g fill="var(--brass)">
+                  <rect x="3.5" y="0" width="5" height="32" />
+                  <rect x="-1" y="0" width="5" height="3" transform="rotate(-30 3.5 1.5)" />
+                  <rect x="0" y="29" width="8.5" height="3" />
+                </g>
+                <g transform="translate(27.5 0)" fill="currentColor">
+                  <polygon points="0,0 4.35,0 5.85,16.1 7.51,7 11.49,7 13.15,16.1 14.65,0 19,0 16.03,32 11.68,32 9.5,20 7.32,32 2.97,32" />
+                  <rect x="-1.5" y="0" width="8" height="3" />
+                  <rect x="12.5" y="0" width="8" height="3" />
+                </g>
+              </svg>
               {site.name}
             </Link>
             <nav className="flex items-baseline gap-5 text-sm text-ink-soft">
@@ -93,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ThemeToggle />
             </div>
           </div>
-        </header>
+        </HideOnScrollHeader>
 
         <main id="main">{children}</main>
 
