@@ -6,11 +6,13 @@ import { getProject, projects } from '@/content/projects';
 
 import ShowScout from '@/content/case-studies/show-scout.mdx';
 import PaperDoc from '@/content/case-studies/paper-doc-tutoring.mdx';
+import SocialPoller from '@/content/case-studies/paper-doc-social-poller.mdx';
 import Cloaked from '@/content/case-studies/cloaked.mdx';
 
 const BODIES: Record<string, React.ComponentType> = {
 	'show-scout': ShowScout,
 	'paper-doc-tutoring': PaperDoc,
+	'paper-doc-social-poller': SocialPoller,
 	cloaked: Cloaked,
 };
 

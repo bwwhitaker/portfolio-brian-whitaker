@@ -38,8 +38,6 @@ export const metadata: Metadata = {
     url: site.url,
     siteName: site.name,
     type: "website",
-    // TODO: add /public/og.png (1200x630). See MEDIA-CHECKLIST.md.
-    images: ["/og.png"],
   },
 };
 
@@ -108,7 +106,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/about" className="hover:text-ink">
                 About
               </Link>
-              <a href={site.links.github} className="hover:text-ink">
+              <a
+                href={site.links.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-ink"
+              >
                 GitHub
               </a>
             </nav>
@@ -127,6 +130,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               site is{" "}
               <a
                 href={site.links.portfolioRepo}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-ink underline decoration-brass decoration-2 underline-offset-4"
               >
                 on GitHub

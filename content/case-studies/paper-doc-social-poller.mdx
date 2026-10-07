@@ -1,0 +1,135 @@
+## The problem
+
+Paper Doc Tutoring is a two-person business, and for now its marketing channel
+is short-form video. We post, and then we are left guessing: which videos
+landed, whether followers are growing, whether what we did last month worked.
+
+The platform does not help. Social APIs return current totals, not history. If
+you want to know how a video performed in its first week, you have to have
+written the number down in its first week. Nobody does that by hand, and the
+week you forget is the one that mattered.
+
+<Callout label="The framing that mattered">
+The product here is not a dashboard. It is a record. The charts are only
+worth anything if a snapshot was taken every day, so the part that has to be
+boringly reliable is the collector, and I built that first.
+</Callout>
+
+## What it does
+
+A daily job reads our TikTok account and every public post, and writes the
+numbers into Postgres. The admin dashboard inside the Paper Doc app charts them
+over time.
+
+<MediaSlot
+  id="SP-01"
+  kind="screenshot"
+  what="The admin social dashboard: follower count over time, and a table of posts with views, likes and shares"
+  framing="Desktop, full width, light theme. Use real data from at least a few weeks if possible. Crop to the content column."
+  purpose="Shows the output of the system, which is what a reader will want to see first."
+/>
+
+## How it fits together
+
+Two repos, one database. The collector is a run-once Go binary that GitHub
+Actions starts every day. It writes to the shared Supabase project. The
+dashboard lives in the Paper Doc app and only reads those tables.
+
+For each account in a committed list, a run does the same four things:
+
+1. Load the stored OAuth token from Postgres, and refresh it if it expires soon.
+2. Fetch account stats and all public posts.
+3. Write one account snapshot, upsert each post, and add one snapshot row per
+   post, all in a single transaction.
+4. Move on to the next account, whatever happened.
+
+<Callout label="Why a run-once binary and not a service">
+Daily snapshots do not need a process that is always up. A binary on a schedule
+costs nothing between runs, has nothing to keep healthy, and fails loudly in a
+place I already look. If it misses a day, the next run just takes that day's
+snapshot.
+</Callout>
+
+## The hard part was tokens
+
+TikTok rotates refresh tokens. Every refresh returns a new one and invalidates
+the old one. That turns a boring detail into the main failure mode: if the job
+refreshes, then crashes before saving the new token, the account is locked out
+until someone re-authorizes by hand.
+
+So the new refresh token is saved the moment it comes back, before any data is
+fetched. The rest of the run can fail and the next run still has a working
+credential.
+
+<Revise>
+Add a short code sample of the refresh-and-persist step from
+internal/tiktok or internal/store, and say how you tested it. The README lists
+tests for token refresh and per-account errors as a to-do, so say plainly
+where that stands.
+</Revise>
+
+Refresh tokens last about a year. When one expires, that account fails with a
+message to re-run the one-time authorization helper, and the other accounts
+carry on.
+
+## Decisions
+
+<Decisions
+  rows={[
+    {
+      decision: "A daily snapshot taken by my own job",
+      instead: "Reading history from the TikTok API",
+      because:
+        "The API only returns current totals. History exists only because a run stored it, so the collector's reliability is the product.",
+    },
+    {
+      decision: "Go, run once on GitHub Actions",
+      instead: "A long-running service or a Node cron inside the web app",
+      because:
+        "Nothing needs to be up between runs. A single binary is simple to deploy and keeps scraping-style work off the request-handling runtime.",
+    },
+    {
+      decision: "One transaction per account",
+      instead: "Writing stats and posts separately",
+      because:
+        "A partial write would leave a snapshot with no matching post rows, which silently corrupts the history.",
+    },
+    {
+      decision: "Accounts fail independently",
+      instead: "Stopping the run on the first error",
+      because:
+        "One expired token should not cost the other accounts a day of data. The job still exits non-zero at the end so the failure is visible.",
+    },
+    {
+      decision: "A Provider interface per platform",
+      instead: "TikTok-specific code throughout",
+      because:
+        "Adding Instagram means a new package and a config entry. The schema keeps platform extras in jsonb columns, so it needs no migration.",
+    },
+    {
+      decision: "Collector in its own repo, tables owned by the app's migrations",
+      instead: "Putting the poller in the Paper Doc app repo",
+      because:
+        "Different language, different deploy target, different failure modes. The app's migrations stay the source of truth for the schema.",
+    },
+  ]}
+/>
+
+## What is not done
+
+- The TikTok app is still in Sandbox. Submitting it for review is the next
+  step, because Sandbox is not meant for permanent use.
+- Tests for token refresh and per-account error handling. The TikTok client
+  itself is covered.
+- Instagram. The structure is ready for it, but it likely needs a Meta developer
+  app and a Business or Creator account.
+- Trends. I could not find a workable official source, since the Research API
+  excludes commercial users and Creative Center has no API. Before choosing
+  between a paid provider and scraping, I need to decide what "trends" means
+  for us: all of TikTok, or what works in the test prep niche.
+
+<Revise>
+Once there is a few weeks of data, add the one thing it told you. A project
+whose output changed a decision is much stronger evidence than one that only
+collects numbers.
+</Revise>
