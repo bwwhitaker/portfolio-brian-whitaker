@@ -100,6 +100,14 @@ background permanently because the change had no route back, and the diagonal
 mode flag and its button label were two separate pieces of state that had to be
 flipped together by hand.
 
+One I did find by playing. The "That was lucky!" alert is a non-blocking
+snackbar, so the board stayed live behind it. Clicking Fire! there fired a
+second, empty shot, which counts as a loss, and wiped the streak the alert had
+just spared. The fix was to treat any result as modal: a backdrop sits behind
+the alert, Fire! and the cells ignore input while it is open, and clicking
+anywhere outside returns to the landing page with the streak intact. Tests
+cover all three, and I checked that the first two fail with the guard removed.
+
 <Callout label='Where the tests stop'>
 	The component tests assert wiring, not rules. Adjacency maths is already covered at the unit level, and re-asserting
 	it through a rendered DOM would be slower, more brittle, and no more convincing. What the component tests cover is
@@ -150,9 +158,11 @@ either: black text on a dark grey field is about 1.3:1 contrast, against the
 The tests moved with it. Cells are found by role and accessible name, not by
 the number printed on them, and there are new tests for arrow-key movement, the
 single Tab stop, Enter to scan, the announcements, the radio group, the reveal
-on a loss, the destroyed ships on a win, and the icons. The old colour test only asserted that the text was
-white; it now computes the contrast ratio of every icon and fill pair and
-requires 4.5:1.
+on a loss, the destroyed ships on a win, and the icons. The old colour test only
+asserted that the text was white; it now computes the contrast ratio of every
+icon and fill pair and requires 4.5:1. The win and game-over messages also
+agree with the ship count now ("the cloaked ship" or "the cloaked ships"), with
+a test for each.
 
 <Revise>
 	Say honestly how this was checked. The suite exercises roles, names, focus, the live region and contrast, but if you
@@ -162,7 +172,7 @@ requires 4.5:1.
 
 ## The pipeline
 
-Seventy-four tests across five files. The deploy is gated on all of them.
+Eighty tests across five files. The deploy is gated on all of them.
 
 - Migrated from Create React App to Vite.
 - GitHub Actions runs three jobs — test, build, deploy — chained with `needs:`,

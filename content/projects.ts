@@ -133,7 +133,7 @@ export const projects: Project[] = [
 		standfirst:
 			'A Battleship inspired game. The interesting part is underneath: the game logic is a pure, injectable-RNG module with a real test suite, and nothing deploys unless those tests pass.',
 		outcomes: [
-			'74 tests over deterministic game logic with an injectable RNG',
+			'80 tests over deterministic game logic with an injectable RNG',
 			'Keyboard and screen reader accessible: roving-tabindex grid, radio-group modes, live announcements, icon plus colour for every state',
 			'CI/CD gate — a failing test blocks the Pages deploy',
 			'Create React App to Vite migration',
