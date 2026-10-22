@@ -12,11 +12,12 @@ know how I work when nobody is watching.
 
 <MediaSlot
 	id='CL-01'
+	src='/media/YouWin.mp4'
 	kind='recording'
 	what='A short round — a clear scan, an adjacent hit, marking two cells, firing, winning'
 	framing='Already captured as docs/gameplay.gif in the repo. Convert to MP4 for the page — a looping GIF at this size is several times the file weight of the equivalent video.'
 	purpose='It is a game. Let a reader see it move before reading a word about test coverage.'
-	aspect='4 / 3'
+	aspect='1281 / 646'
 />
 
 ## The decision that made everything else possible
@@ -108,6 +109,16 @@ the alert, Fire! and the cells ignore input while it is open, and clicking
 anywhere outside returns to the landing page with the streak intact. Tests
 cover all three, and I checked that the first two fail with the guard removed.
 
+<MediaSlot
+	id='CL-06'
+	src='/media/LuckyShot.mp4'
+	kind='recording'
+	what='First scan lands on a ship, the "That was lucky!" alert appears, a click on Fire! does nothing, then a click outside returns to setup with the streak intact'
+	framing='Fix the ship positions first (src/dev-ships.json) so the first scan is certain to hit. Keep the streak counter in frame at the start and end.'
+	purpose='A bug I found by playing, not by tests. Seeing Fire! ignored while the alert is up is the fix, shown.'
+	aspect='1281 / 646'
+/>
+
 <Callout label='Where the tests stop'>
 	The component tests assert wiring, not rules. Adjacency maths is already covered at the unit level, and re-asserting
 	it through a rendered DOM would be slower, more brittle, and no more convincing. What the component tests cover is
@@ -143,17 +154,58 @@ either: black text on a dark grey field is about 1.3:1 contrast, against the
   the "You Win!" banner. Targeted moved from green to amber, because green sat
   too close to the red ship cell for red/green colour-blind players, and amber
   is much lighter than red so the two differ in lightness too.
+- **Landing page and header.** The setup screen is one card with the value
+  next to each slider and a switch for Diagonal Mode, whose explanation is
+  attached to it as its description. The streak is a Victory Streak with a
+  Best Streak, and a tooltip that is also its accessible description. Coming
+  back to setup puts focus on Start scanning, the game sits in a `<main>`, and
+  everything you press is at least 44px tall. Hover states are visible on the
+  dark background, where MUI's default 4% tint cannot be seen.
+- **Settings.** A confirmation before New Game that only appears once there is a
+  round to lose, with "Don't ask me again" and a way to turn it back on, and a
+  Reduce motion switch that follows the device setting until the player
+  chooses.
 - **Results are announced.** A visually hidden live region reports each scan,
   target and unlock, and the ship positions after a win or a loss, since the
   cell's label changing does not always get read out on its own.
 
+<MediaSlot
+	id='CL-03'
+	src='/media/keyboard.mp4'
+	kind='recording'
+	what='A few moves with no mouse: Tab to the mode radio group, arrow between Scan and Target, Tab once into the grid, arrow, Home and End across it, Enter to scan'
+	framing='Show keypresses with KeyCastr, large and at a bottom corner clear of the grid. Never touch the mouse. Stop after a few scans, no need to finish the round.'
+	purpose='The strongest accessibility proof on the page. The viewer sees one Tab stop and arrow-key movement rather than taking my word for it.'
+	aspect='1281 / 646'
+/>
+
 <Callout label='Removing the numbers changed the game-over message'>
 	The cell numbers were not only decoration. The game-over message used them: "the ship was in cell 6". Hiding the
-	numbers meant that message pointed at nothing. Rather than swap in "row 2, column 2", I stopped describing the
-	result in text. On a loss the board now reveals every cloaked ship, including ones you never scanned, and the
-	message just says so. Sighted players see the answer on the grid, and screen reader users get the positions through
-	the live region.
+	numbers meant that message pointed at nothing. Rather than swap in "row 2, column 2", I stopped describing the result
+	in text. On a loss the board now reveals every cloaked ship, including ones you never scanned, and the message just
+	says so. Sighted players see the answer on the grid, and screen reader users get the positions through the live
+	region.
 </Callout>
+
+<MediaSlot
+	id='CL-04'
+	src='/media/YouLose.mp4'
+	kind='recording'
+	what='Lose a round on purpose: fire with an empty target and every cloaked ship appears, including ones never scanned, with a message that names no cell'
+	framing='Use fixed ships so the reveal is clear. Hold the final board for a second before cutting.'
+	purpose='Shows the decision behind the callout above: the answer is on the grid, not in a sentence pointing at a cell number.'
+	aspect='1281 / 646'
+/>
+
+<MediaSlot
+	id='CL-08'
+	src='/media/Accessibility.mp4'
+	kind='recording'
+	what='Open Settings, turn Reduce motion on and off to show the animation change, then show the New Game confirmation with the option to stop asking'
+	framing='Optional. Needs an in-progress round so the confirmation actually appears. Keep it under 10 seconds.'
+	purpose='Small but concrete: the player controls motion and the confirmation only appears when there is something to lose.'
+	aspect='1281 / 646'
+/>
 
 The tests moved with it. Cells are found by role and accessible name, not by
 the number printed on them, and there are new tests for arrow-key movement, the
@@ -164,15 +216,31 @@ icon and fill pair and requires 4.5:1. The win and game-over messages also
 agree with the ship count now ("the cloaked ship" or "the cloaked ships"), with
 a test for each.
 
-<Revise>
-	Say honestly how this was checked. The suite exercises roles, names, focus, the live region and contrast, but if you
-	have not run it with VoiceOver or NVDA, do that before claiming it works with a screen reader, or say plainly that it
-	has not been tested with one.
-</Revise>
+<MediaSlot
+	id='CL-09'
+	src='/media/VoiceOver.mp4'
+	kind='recording'
+	what='VoiceOver (Cmd+F5) reading a cell, for example "row 2, column 3, scanned, ship adjacent", and the live-region announcement after a scan'
+	framing='Optional, and only worth including if you actually run VoiceOver. Turn the caption panel on so the spoken text is readable without sound.'
+	purpose='Turns the screen reader claim from asserted to demonstrated, and resolves the note below.'
+	aspect='1281 / 646'
+/>
 
 ## The pipeline
 
-Eighty tests across five files. The deploy is gated on all of them.
+One hundred and forty-two tests across five files. The deploy is gated on all of them. ESLint
+runs on a flat config with `npm run lint`, but only locally for now; it is not
+part of the gate yet.
+
+<MediaSlot
+	id='CL-07'
+	kind='recording'
+	src='/media/tests.mp4'
+	what='npm test in a clean terminal, ending on the summary showing 142 tests passed across 5 files'
+	framing='Large terminal font, nothing else on screen, no scrollback. Let the summary sit for a second at the end.'
+	purpose='Backs up the 142 tests figure with the real run.'
+	aspect='16 / 9'
+/>
 
 - Migrated from Create React App to Vite.
 - GitHub Actions runs three jobs — test, build, deploy — chained with `needs:`,
@@ -190,14 +258,15 @@ Eighty tests across five files. The deploy is gated on all of them.
 <MediaSlot
 	id='CL-02'
 	kind='screenshot'
+	src='/media/DeploymentPipeline.jpg'
+	alt='GitHub Actions run for the Cloaked repository showing the test, build and deploy jobs chained in order, all passing.'
+	aspect='1462 / 948'
 	what='A green Actions run showing test, build and deploy as three chained jobs'
 	framing='Crop to the job list so the needs: chain is visible. A failed-then-fixed run in the history is fine and arguably better.'
 	purpose='This is the whole point of the project. Without this shot the CI section is a claim.'
 />
 
-<Revise>
-	Add one line about why a game sits among commercial products — something in your own words about keeping engineering
-	habits sharp with no product pressure and no deadline. Then decide whether this stays at all: three strong case
-	studies beat four uneven ones, and this one now earns its place mainly on the testing and CI story rather than the
-	game.
-</Revise>
+## Why a game?
+
+Why have a game mixed in with my commercial ventures? I wanted to develop something fun that would help keep my
+engineering habits sharp while working on a more complex UI and accessible UX.
