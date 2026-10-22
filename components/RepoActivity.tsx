@@ -49,7 +49,12 @@ export default async function RepoActivity({ repo }: { repo: string }) {
   return (
     <p className="mt-4 font-mono text-xs leading-relaxed text-ink-soft">
       <span className="text-viridian">●</span> last commit to{" "}
-      <a href={`https://github.com/${repo}`} className="underline">
+      <a
+        href={`https://github.com/${repo}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+      >
         {repo}
       </a>{" "}
       {relative(data.pushed_at)}

@@ -35,6 +35,9 @@ export default function CreditsRail({ project }: { project: Project }) {
               <a
                 key={l.label}
                 href={l.href}
+                {...(l.href.startsWith("http")
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
                 className="font-display font-semibold underline decoration-brass decoration-2 underline-offset-4 hover:text-brass"
               >
                 {l.label}

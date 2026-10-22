@@ -18,7 +18,7 @@ export default function Home() {
 						the products myself: schema, application, payments, cron jobs, CI/CD pipelines, UX design, and the rest.
 					</p>
 					<p className='self-end font-prose leading-relaxed text-ink-soft'>
-						The three case studies below are things running in production or close to it. Each one shows the decision I
+						The four case studies below are things running in production or close to it. Each one shows the decision I
 						made, the thing that made it hard, and the code that resolved it.
 					</p>
 				</div>

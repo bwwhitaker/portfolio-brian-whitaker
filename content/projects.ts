@@ -11,14 +11,14 @@ export const site = {
 	/** Matches the resume summary — keep these two in sync. */
 	tagline:
 		'Senior product manager with 7+ years delivering enterprise SaaS, and hands-on full-stack delivery of consumer web apps.',
-	url: 'https://bwwhitaker.github.io/portfolio',
+	url: 'https://brianwhitaker.dev',
 	description: 'Product engineer and former PM. I design systems, write the code, and run them in production.',
 	links: {
 		email: 'bwwhitaker@gmail.com',
 		github: 'https://github.com/bwwhitaker',
 		linkedin: 'https://www.linkedin.com/in/bwwhitaker',
 		resume: '/Brian_Whitaker_Product_and_Engineering.pdf', // drop the PDF in /public
-		portfolioRepo: 'https://github.com/bwwhitaker/portfolio',
+		portfolioRepo: 'https://github.com/bwwhitaker/portfolio-brian-whitaker',
 	},
 };
 
@@ -95,6 +95,29 @@ export const projects: Project[] = [
 	},
 
 	{
+		slug: 'paper-doc-social-poller',
+		name: 'Paper Doc Social Poller',
+		tagline: 'Records how our TikTok marketing performs over time, because the API only gives you today.',
+		role: 'Solo — product, engineering',
+		period: '2026 – present',
+		status: 'In development',
+		stack: ['Go', 'TikTok Display API', 'OAuth 2.0', 'Supabase / Postgres', 'GitHub Actions', 'Next.js (dashboard)'],
+		links: [
+			{ label: 'Source', href: 'https://github.com/bwwhitaker/paper-doc-social-poller' },
+		],
+		repo: 'bwwhitaker/paper-doc-social-poller',
+		standfirst:
+			'Social is the marketing channel Paper Doc Tutoring is betting on for now, and social APIs only report current totals. A small Go job takes a daily snapshot so there is a history to learn from, and the admin dashboard charts it.',
+		outcomes: [
+			'REVISE: days of history recorded / posts tracked',
+			'REVISE: a decision the data changed (what to post more or less of)',
+			'Runs unattended daily, and one failing account never blocks the others',
+		],
+		evidence: ['product', 'engineering'],
+		featured: false,
+	},
+
+	{
 		slug: 'cloaked',
 		name: 'Cloaked',
 		tagline: 'A browser game, and an excuse to get the engineering hygiene right.',
@@ -103,14 +126,15 @@ export const projects: Project[] = [
 		status: 'Shipped',
 		stack: ['React', 'Vite', 'Vitest', 'GitHub Actions', 'GitHub Pages'],
 		links: [
-			{ label: 'Play it', href: '#' }, // TODO
+			{ label: 'Play it', href: 'https://bwwhitaker.github.io/cloaked/' },
 			{ label: 'Source', href: 'https://github.com/bwwhitaker/cloaked' },
 		],
 		repo: 'bwwhitaker/cloaked',
 		standfirst:
 			'A Battleship inspired game. The interesting part is underneath: the game logic is a pure, injectable-RNG module with a real test suite, and nothing deploys unless those tests pass.',
 		outcomes: [
-			'64 unit tests over deterministic game logic with an injectable RNG',
+			'142 tests, from deterministic game logic with an injectable RNG up to the components',
+			'Keyboard and screen reader accessible: roving-tabindex grid, radio-group modes, live announcements, icon plus colour for every state, Settings with Reduce motion',
 			'CI/CD gate — a failing test blocks the Pages deploy',
 			'Create React App to Vite migration',
 		],
